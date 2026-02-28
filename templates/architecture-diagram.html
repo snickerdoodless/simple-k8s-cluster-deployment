@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRE Architecture — rall4sre.my.id</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/arch.css') }}">
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div>
+      <h1>SIMPLE K8S CLUSTER ARCHITECTURE</h1>
+      <div class="sub">→ rall4sre.my.id &nbsp;·&nbsp; AWS VPC &nbsp;·&nbsp; Kubeadm Cluster &nbsp;·&nbsp; 3 Nodes</div>
+    </div>
+    <div class="hdr-right">SRE SYSTEM DESIGN<br>Kubeadm Multi-Node<br>Click any node for tutorial</div>
+  </div>
+
+  <!-- MIDDLE: diagram + panel -->
+  <div class="mid">
+
+    <!-- DIAGRAM PANE (scrollable) -->
+    <div class="diagram-pane">
+      <div class="canvas" id="cvs">
+
+        <svg class="svg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="mo" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3z" fill="#c2501a" />
+            </marker>
+            <marker id="mb" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3z" fill="#1a4fd6" />
+            </marker>
+            <marker id="mp" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3z" fill="#6d28d9" />
+            </marker>
+            <marker id="mg" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3z" fill="#166534" />
+            </marker>
+            <marker id="mr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3z" fill="#b91c1c" />
+            </marker>
+            <marker id="ms" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3z" fill="#475569" />
+            </marker>
+          </defs>
+
+          <!--
+    WIDER LAYOUT — cols A=180, B=560, C=940. 100px gap between card rows.
+    Canvas: 1200×2400.
+
+    NODE CENTERS:
+      Internet    560, 100
+      SecGroup    560, 360
+      Worker1     180, 610   CP 560,610   Worker2 940,610
+      Ingress     560, 860   ConfigMap 940,860
+      APIPod1     180,1110   SvcAPI 560,1110  APIPod2 940,1110
+      RedisPod    180,1360   SvcRedis 560,1360
+      PV          180,1620
+
+    ZONES (wider, ~60px padding each side):
+      AWS VPC:   x=40  y=230  w=1100  h=1530
+      Kubeadm:   x=62  y=470  w=1056  h=1290
+      Namespace: x=84  y=720  w=1012  h=1030
+    -->
+
+          <!-- AWS VPC (outermost) -->
+          <rect x="40" y="230" width="1100" height="1530" rx="22" fill="rgba(26,79,214,0.03)"
+            stroke="rgba(26,79,214,0.32)" stroke-width="2" />
+          <rect x="100" y="218" width="172" height="20" rx="3" fill="#f0ece6" />
+          <text x="110" y="232" fill="#1a4fd6" font-family="'JetBrains Mono',monospace" font-size="10" font-weight="700"
+            letter-spacing="2">☁ AWS VPC</text>
+
+          <!-- Kubeadm Cluster -->
+          <rect x="62" y="470" width="1056" height="1290" rx="17" fill="rgba(109,40,217,0.025)"
+            stroke="rgba(109,40,217,0.32)" stroke-width="1.5" />
+          <rect x="84" y="458" width="186" height="20" rx="3" fill="#f0ece6" />
+          <text x="94" y="472" fill="#6d28d9" font-family="'JetBrains Mono',monospace" font-size="10" font-weight="700"
+            letter-spacing="3">☸ KUBEADM CLUSTER</text>
+
+          <!-- Namespace sre-production -->
+          <rect x="84" y="720" width="1012" height="1030" rx="14" fill="rgba(22,101,52,0.02)"
+            stroke="rgba(22,101,52,0.38)" stroke-width="1.5" stroke-dasharray="6 4" />
+          <rect x="100" y="708" width="240" height="20" rx="3" fill="#f0ece6" />
+          <text x="100" y="722" fill="#166534" font-family="'JetBrains Mono',monospace" font-size="9.5"
+            font-weight="700" letter-spacing="2">#️⃣ NAMESPACE: SRE-PRODUCTION</text>
+
+          <!-- ═══ ARROWS ═══ -->
+
+          <!-- 1. Internet(bottom=165) → SecGroup(top=295) -->
+          <path class="fl" d="M 560,165 L 560,289" stroke="#c2501a" stroke-width="2" fill="none" stroke-dasharray="7 4"
+            marker-end="url(#mo)" />
+
+          <!-- 2. SecGroup(bottom=425) → Worker1/2(top=545) -->
+          <path class="fl" d="M 560,425 L 180,425 L 180,539" stroke="#1a4fd6" stroke-width="2" fill="none"
+            stroke-dasharray="7 4" marker-end="url(#mb)" />
+          <path class="fl" d="M 560,425 L 940,425 L 940,539" stroke="#1a4fd6" stroke-width="2" fill="none"
+            stroke-dasharray="7 4" marker-end="url(#mb)" />
+
+          <!-- 3. CP manages Worker1+2 (center y=610) -->
+          <path d="M 490,602 L 256,602" stroke="#475569" stroke-width="1.5" fill="none" stroke-dasharray="5 4"
+            marker-end="url(#ms)" />
+          <path d="M 490,618 L 256,618" stroke="#475569" stroke-width="1.5" fill="none" stroke-dasharray="5 4"
+            opacity=".3" />
+          <path d="M 630,602 L 864,602" stroke="#475569" stroke-width="1.5" fill="none" stroke-dasharray="5 4"
+            marker-end="url(#ms)" />
+          <path d="M 630,618 L 864,618" stroke="#475569" stroke-width="1.5" fill="none" stroke-dasharray="5 4"
+            opacity=".3" />
+
+          <!-- 4. Worker1/2(bottom=675) → Ingress(left/right, center y=860) -->
+          <path class="fl" d="M 180,675 L 180,860 L 484,860" stroke="#6d28d9" stroke-width="2" fill="none"
+            stroke-dasharray="7 4" marker-end="url(#mp)" />
+          <path class="fl" d="M 940,675 L 940,860 L 636,860" stroke="#6d28d9" stroke-width="2" fill="none"
+            stroke-dasharray="7 4" marker-end="url(#mp)" />
+
+          <!-- 5. Ingress(bottom=925) → SvcAPI(top=1045) -->
+          <path class="fl" d="M 560,925 L 560,1039" stroke="#166534" stroke-width="2" fill="none" stroke-dasharray="7 4"
+            marker-end="url(#mg)" />
+
+          <!-- 6. SvcAPI → APIPod1+2 (center y=1110) -->
+          <path class="fl" d="M 490,1110 L 256,1110" stroke="#166534" stroke-width="2" fill="none"
+            stroke-dasharray="7 4" marker-end="url(#mg)" />
+          <path class="fl" d="M 630,1110 L 864,1110" stroke="#166534" stroke-width="2" fill="none"
+            stroke-dasharray="7 4" marker-end="url(#mg)" />
+
+          <!-- 7. APIPod1/2(bottom=1175) → SvcRedis(center y=1360) -->
+          <path class="fl" d="M 180,1175 L 180,1360 L 484,1360" stroke="#b91c1c" stroke-width="2" fill="none"
+            stroke-dasharray="7 4" marker-end="url(#mr)" />
+          <path class="fl" d="M 940,1175 L 940,1360 L 636,1360" stroke="#b91c1c" stroke-width="2" fill="none"
+            stroke-dasharray="7 4" marker-end="url(#mr)" />
+
+          <!-- 8. SvcRedis → RedisPod (center y=1360) -->
+          <path class="fl" d="M 490,1360 L 256,1360" stroke="#b91c1c" stroke-width="2" fill="none"
+            stroke-dasharray="7 4" marker-end="url(#mr)" />
+
+          <!-- 9. RedisPod(bottom=1425) → PV(top=1555) -->
+          <path class="fl" d="M 180,1425 L 180,1549" stroke="#b91c1c" stroke-width="2" fill="none"
+            stroke-dasharray="7 4" marker-end="url(#mr)" />
+        </svg>
+
+        <!-- CONN LABELS (wider columns: A=180, B=560, C=940) -->
+        <div class="clbl lo" style="left:608px;top: 210px;">:80/:443</div>
+        <div class="clbl lb" style="left:340px;top:400px;">port 80/443</div>
+        <div class="clbl lb" style="left:780px;top:400px;">port 80/443</div>
+        <div class="clbl ls" style="left:354px;top:580px;">manages</div>
+        <div class="clbl ls" style="left:766px;top:580px;">manages</div>
+        <div class="clbl lp" style="left:340px;top:820px;">traffic</div>
+        <div class="clbl lp" style="left:770px;top:820px;">traffic</div>
+        <div class="clbl lg" style="left:660px;top:968px;">routing rule</div>
+        <div class="clbl lg" style="left:354px;top:1095px;">replica 1</div>
+        <div class="clbl lg" style="left:766px;top:1095px;">replica 2</div>
+        <div class="clbl lr" style="left:340px;top:1268px;">read/write</div>
+        <div class="clbl lr" style="left:770px;top:1268px;">read/write</div>
+        <div class="clbl lr" style="left:354px;top:1346px;">:6379</div>
+        <div class="clbl lr" style="left:250px;top:1490px;">PVC mount</div>
+
+        <!-- NODES — wider columns: A=180, B=560, C=940 -->
+        <div class="node t-orange" id="n-internet" style="left:560px;top:100px;" onclick="showPanel('internet')">
+          <div class="ncard">
+            <div class="nbadge">1</div>
+            <div class="nicon">🌐</div>
+            <div class="nname">Internet</div>
+            <div class="ntag">rall4sre.my.id</div>
+          </div>
+        </div>
+        <div class="node t-blue" id="n-sg" style="left:560px;top:360px;" onclick="showPanel('sg')">
+          <div class="ncard">
+            <div class="nbadge">2</div>
+            <div class="nicon">🛡️</div>
+            <div class="nname">Security Group</div>
+            <div class="ntag">:80 :443 :22 :6443</div>
+          </div>
+        </div>
+        <div class="node t-teal" id="n-worker1" style="left:180px;top:610px;" onclick="showPanel('worker')">
+          <div class="ncard">
+            <div class="nbadge">3</div>
+            <div class="nicon">💻</div>
+            <div class="nname">Worker Node 1</div>
+            <div class="ntag">EC2 t3.medium</div>
+          </div>
+        </div>
+        <div class="node t-slate" id="n-cp" style="left:560px;top:610px;" onclick="showPanel('cp')">
+          <div class="ncard">
+            <div class="nbadge">4</div>
+            <div class="nicon">🖥️</div>
+            <div class="nname">Control Plane</div>
+            <div class="ntag">API Server · etcd</div>
+          </div>
+        </div>
+        <div class="node t-teal" id="n-worker2" style="left:940px;top:610px;" onclick="showPanel('worker')">
+          <div class="ncard">
+            <div class="nbadge">5</div>
+            <div class="nicon">💻</div>
+            <div class="nname">Worker Node 2</div>
+            <div class="ntag">EC2 t3.medium</div>
+          </div>
+        </div>
+        <div class="node t-purple" id="n-ingress" style="left:560px;top:860px;" onclick="showPanel('ingress')">
+          <div class="ncard">
+            <div class="nbadge">6</div>
+            <div class="nicon">🚪</div>
+            <div class="nname">NGINX Ingress</div>
+            <div class="ntag">Host header routing</div>
+          </div>
+        </div>
+        <div class="node t-green" id="n-configmap" style="left:940px;top:860px;" onclick="showPanel('configmap')">
+          <div class="ncard">
+            <div class="nicon">📋</div>
+            <div class="nname">Namespace + ConfigMap</div>
+            <div class="ntag">foundation.yaml</div>
+          </div>
+        </div>
+        <div class="node t-green" id="n-apipod1" style="left:180px;top:1110px;" onclick="showPanel('apipod')">
+          <div class="ncard">
+            <div class="nicon">🏃</div>
+            <div class="nname">API Pod Replica 1</div>
+            <div class="ntag">Worker Node 1</div>
+          </div>
+        </div>
+        <div class="node t-green" id="n-svcapi" style="left:560px;top:1110px;" onclick="showPanel('svcapi')">
+          <div class="ncard">
+            <div class="nbadge">7</div>
+            <div class="nicon">⚙️</div>
+            <div class="nname">Service backend-api</div>
+            <div class="ntag">ClusterIP · LB</div>
+          </div>
+        </div>
+        <div class="node t-green" id="n-apipod2" style="left:940px;top:1110px;" onclick="showPanel('apipod')">
+          <div class="ncard">
+            <div class="nicon">🏃</div>
+            <div class="nname">API Pod Replica 2</div>
+            <div class="ntag">Worker Node 2</div>
+          </div>
+        </div>
+        <div class="node t-red" id="n-rpod" style="left:180px;top:1360px;" onclick="showPanel('redis')">
+          <div class="ncard">
+            <div class="nicon">🗄️</div>
+            <div class="nname">Redis Pod</div>
+            <div class="ntag">In-memory cache</div>
+          </div>
+        </div>
+        <div class="node t-red" id="n-rsvc" style="left:560px;top:1360px;" onclick="showPanel('redis')">
+          <div class="ncard">
+            <div class="nbadge">8</div>
+            <div class="nicon">⚙️</div>
+            <div class="nname">Service Redis</div>
+            <div class="ntag">ClusterIP · :6379</div>
+          </div>
+        </div>
+        <div class="node t-red" id="n-pv" style="left:180px;top:1620px;" onclick="showPanel('pv')">
+          <div class="ncard">
+            <div class="nicon">💾</div>
+            <div class="nname">Persistent Volume</div>
+            <div class="ntag">PVC → Local Disk</div>
+          </div>
+        </div>
+
+      </div><!-- /canvas -->
+    </div><!-- /diagram-pane -->
+
+    <!-- RESIZE HANDLE (drag to resize panel) -->
+    <div class="resize-handle" id="resize-handle"></div>
+
+    <!-- TUTORIAL PANEL (right column, hidden until node clicked) -->
+    <div class="panel-pane" id="panel-pane">
+
+      <div class="panel-close">
+        <span
+          style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);">Tutorial</span>
+        <button class="panel-close-btn" onclick="closePanel()">✕ Close &nbsp;[Esc]</button>
+      </div>
+
+      <div class="panel-inner">
+
+        <!-- INTERNET -->
+        <div class="panel-content" id="panel-internet">
+          <div class="phase-badge"
+            style="background:rgba(194,80,26,.1);border-color:rgba(194,80,26,.3);color:var(--orange);">🌐 Entry Point
+          </div>
+          <div class="panel-node-title">Internet</div>
+          <div class="panel-node-sub">rall4sre.my.id · Public DNS · Port 80/443</div>
+          <div class="explanation">
+            Setiap request dimulai dari sini. Saat user mengetik <strong>rall4sre.my.id</strong> di browser, hal pertama
+            yang terjadi adalah <strong>DNS lookup</strong>. Browser mengirim pertanyaan ke DNS resolver: "IP berapa
+            yang dimiliki domain ini?" DNS resolver menjawab dengan IP publik dari Worker Nodes kamu.<br><br>
+            Setelah dapat IP-nya, browser membuka koneksi TCP ke IP tersebut. Port <strong>80</strong> untuk HTTP biasa,
+            port <strong>443</strong> untuk HTTPS (terenkripsi dengan TLS).<br><br>
+            Yang penting diingat: traffic dari internet <strong>tidak pernah langsung ke Control Plane</strong>. Control
+            Plane tidak punya port web terbuka. Traffic web hanya masuk ke Worker Nodes.
+          </div>
+          <div class="note-box">💡 DNS mengarah ke <strong>Worker Nodes</strong>, bukan Control Plane. Ini adalah
+            prinsip keamanan — Control Plane hanya boleh diakses oleh admin via kubectl (port 6443).</div>
+        </div>
+
+        <!-- SECURITY GROUP -->
+        <div class="panel-content" id="panel-sg">
+          <div class="phase-badge"
+            style="background:rgba(26,79,214,.1);border-color:rgba(26,79,214,.3);color:var(--blue);">🛡️ Phase 1 · AWS
+            Setup</div>
+          <div class="panel-node-title">Security Group</div>
+          <div class="panel-node-sub">AWS Cloud Firewall · Stateful Inbound Rules</div>
+          <div class="explanation">
+            Security Group adalah firewall di level AWS — bukan di dalam server, tapi di <strong>pintu masuk jaringan
+              AWS</strong> sebelum traffic menyentuh server kamu sama sekali. Semua port yang tidak disebutkan secara
+            eksplisit akan <strong>di-drop secara diam-diam</strong> (tidak ada pesan error ke pengirim).<br><br>
+            <strong>Stateful</strong> artinya: kalau kamu allow traffic masuk di port 80, maka response keluar dari
+            koneksi yang sama otomatis di-allow. Kamu tidak perlu buat outbound rule secara terpisah untuk HTTP
+            response.
+          </div>
+          <div class="steps-title">4 Port yang Perlu Dibuka</div>
+          <pre><span class="cmd">Port 80   </span>  HTTP   Source: 0.0.0.0/0  <span class="cmt"># Semua IP boleh akses (web publik)</span>
+<span class="cmd">Port 443  </span>  HTTPS  Source: 0.0.0.0/0  <span class="cmt"># Semua IP boleh akses (HTTPS)</span>
+<span class="cmd">Port 22   </span>  SSH    Source: IP kamu     <span class="cmt"># Hanya IP kamu (admin SSH)</span>
+<span class="cmd">Port 6443 </span>  TCP    Source: IP kamu     <span class="cmt"># kubectl API — hanya admin</span></pre>
+          <div class="note-box">💡 Port 80/443 dibuka ke Worker Nodes saja. Port 6443 ke Control Plane saja. Pisahkan
+            Security Group-nya kalau bisa, atau gunakan satu SG dengan rule yang tepat per instance.</div>
+        </div>
+
+        <!-- WORKER NODES -->
+        <div class="panel-content" id="panel-worker">
+          <div class="shared-badge">⚡ Jalankan di SEMUA 3 node — Worker 1, Worker 2, dan Control Plane</div>
+          <div class="phase-badge"
+            style="background:rgba(15,118,110,.1);border-color:rgba(15,118,110,.3);color:var(--teal);">🔧 Phase 1 · Node
+            Setup</div>
+          <div class="panel-node-title">Worker Nodes</div>
+          <div class="panel-node-sub">EC2 t3.medium · Ubuntu · 3 tahap setup</div>
+          <div class="tabs">
+            <button class="tab-btn on" onclick="switchTab(event,'worker','os')">OS Prep</button>
+            <button class="tab-btn" onclick="switchTab(event,'worker','containerd')">Containerd</button>
+            <button class="tab-btn" onclick="switchTab(event,'worker','kubeadm')">kubeadm + kubelet</button>
+          </div>
+
+          <div class="tab-pane on" id="worker-os">
+            <div class="explanation">
+              Sebelum install Kubernetes, setiap node butuh persiapan di level OS. Ada 3 hal yang harus dilakukan:
+              <strong>matikan swap</strong>, <strong>load modul kernel jaringan</strong>, dan <strong>atur
+                sysctl</strong> supaya Pod dari node berbeda bisa saling berkomunikasi.
+            </div>
+
+            <div class="steps-title">1 — Matikan Swap Secara Permanen</div>
+            <div class="step-label"><span style="--sc:#0f766e">KENAPA</span> Kubernetes scheduler mengasumsikan tidak
+              ada swap. Kalau swap aktif, memory limits Pod jadi tidak akurat dan scheduler bisa salah keputusan.</div>
+            <pre><span class="cmt"># Matikan swap sekarang (langsung aktif):</span>
+<span class="cmd">sudo swapoff -a</span>
+
+<span class="cmt"># Komentari baris swap di /etc/fstab supaya tidak aktif lagi setelah reboot:</span>
+<span class="cmd">sudo sed</span> <span class="flag">-i</span> <span class="str">'/ swap / s/^\(.*\)$/#\1/g'</span> /etc/fstab</pre>
+
+            <div class="steps-title">2 — Load Modul Kernel untuk Networking Container</div>
+            <div class="step-label"><span style="--sc:#0f766e">KENAPA</span> <code>overlay</code> dibutuhkan oleh
+              container filesystem (OverlayFS). <code>br_netfilter</code> memungkinkan iptables melihat traffic yang
+              melewati bridge jaringan container — wajib ada untuk CNI (Calico).</div>
+            <pre><span class="cmt"># Tulis daftar modul yang harus di-load otomatis saat boot:</span>
+<span class="cmd">cat</span> &lt;&lt;EOF | <span class="cmd">sudo tee</span> /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+<span class="cmt"># Load modulnya sekarang tanpa perlu reboot:</span>
+<span class="cmd">sudo modprobe overlay</span>
+<span class="cmd">sudo modprobe br_netfilter</span></pre>
+
+            <div class="steps-title">3 — Terapkan Parameter Sysctl untuk IP Routing</div>
+            <div class="step-label"><span style="--sc:#0f766e">KENAPA</span> Ketiga parameter ini memastikan paket
+              jaringan dari Pod diteruskan dengan benar antar node, dan iptables bisa mengatur traffic yang melewati
+              bridge interface container.</div>
+            <pre><span class="cmt"># Tulis konfigurasi sysctl untuk Kubernetes:</span>
+<span class="cmd">cat</span> &lt;&lt;EOF | <span class="cmd">sudo tee</span> /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+
+<span class="cmt"># Terapkan semua konfigurasi sysctl tanpa reboot:</span>
+<span class="cmd">sudo sysctl --system</span></pre>
+            <div class="note-box">✅ Tidak ada error = siap lanjut. Kalau ada error, cek apakah modul kernel sudah
+              ter-load dengan <code>lsmod | grep overlay</code>. Lanjut ke tab <strong>Containerd</strong>.</div>
+          </div>
+
+          <div class="tab-pane" id="worker-containerd">
+            <div class="explanation">
+              <strong>Containerd</strong> adalah <em>container runtime</em> — mesin yang benar-benar menjalankan
+              container di dalam Pod. Kubernetes sendiri tidak menjalankan container secara langsung; ia berkomunikasi
+              dengan Containerd melalui interface standar bernama <strong>CRI (Container Runtime
+                Interface)</strong>.<br><br>
+              Install dan konfigurasi ini harus dilakukan di <strong>ketiga node</strong>.
+            </div>
+
+            <div class="steps-title">1 — Install Containerd</div>
+            <pre><span class="cmd">sudo apt-get update</span>
+<span class="cmd">sudo apt-get install</span> <span class="flag">-y</span> containerd</pre>
+
+            <div class="steps-title">2 — Buat File Konfigurasi Default</div>
+            <div class="step-label"><span style="--sc:#0f766e">KENAPA</span> Containerd tanpa config file bisa jalan,
+              tapi kita perlu file-nya agar bisa mengubah satu setting penting di langkah berikutnya.</div>
+            <pre><span class="cmd">sudo mkdir -p</span> /etc/containerd
+<span class="cmd">containerd config default</span> | <span class="cmd">sudo tee</span> /etc/containerd/config.toml</pre>
+
+            <div class="steps-title">3 — Aktifkan SystemdCgroup</div>
+            <div class="step-label"><span style="--sc:#0f766e">KENAPA</span> Kubernetes menggunakan
+              <strong>systemd</strong> untuk mengelola cgroup (resource limits). Kalau Containerd pakai cgroup driver
+              yang berbeda (cgroupfs), kubelet dan runtime akan bertabrakan dan Pod gagal start.
+            </div>
+            <pre><span class="cmt"># Ganti nilai SystemdCgroup dari false menjadi true:</span>
+<span class="cmd">sudo sed</span> <span class="flag">-i</span> \
+  <span class="str">'s/SystemdCgroup = false/SystemdCgroup = true/'</span> \
+  /etc/containerd/config.toml
+
+<span class="cmt"># Verifikasi perubahannya:</span>
+<span class="cmd">grep</span> SystemdCgroup /etc/containerd/config.toml
+<span class="cmt"># Harus tampil: SystemdCgroup = true</span></pre>
+
+            <div class="steps-title">4 — Restart dan Enable Containerd</div>
+            <pre><span class="cmd">sudo systemctl restart</span> containerd
+<span class="cmd">sudo systemctl enable</span> containerd
+
+<span class="cmt"># Cek status — harus active (running):</span>
+<span class="cmd">sudo systemctl status</span> containerd</pre>
+            <div class="note-box">✅ Status <strong>active (running)</strong> = berhasil. Lanjut ke tab <strong>kubeadm +
+                kubelet</strong>.</div>
+          </div>
+
+          <div class="tab-pane" id="worker-kubeadm">
+            <div class="explanation">
+              Tiga tools yang perlu diinstall di setiap node:<br><br>
+              • <strong>kubelet</strong> — agent yang berjalan sebagai service di setiap node. Tugasnya memastikan
+              container di dalam Pod benar-benar berjalan sesuai instruksi dari Control Plane.<br>
+              • <strong>kubeadm</strong> — tool satu kali pakai untuk bootstrap cluster. Digunakan untuk
+              <code>init</code> di CP dan <code>join</code> di workers.<br>
+              • <strong>kubectl</strong> — CLI untuk mengelola cluster. Kamu pakai ini untuk deploy, cek status, debug,
+              dll.
+            </div>
+
+            <div class="steps-title">1 — Tambahkan Repository Kubernetes</div>
+            <div class="step-label"><span style="--sc:#0f766e">KENAPA</span> Package kubectl/kubeadm/kubelet tidak ada
+              di repository Ubuntu default. Kita perlu tambahkan repo resmi dari Kubernetes.</div>
+            <pre><span class="cmd">sudo apt-get install</span> <span class="flag">-y</span> apt-transport-https ca-certificates curl
+
+<span class="cmt"># Download GPG key untuk verifikasi package:</span>
+<span class="cmd">curl</span> <span class="flag">-fsSL</span> \
+  https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | \
+  <span class="cmd">sudo gpg --dearmor</span> <span class="flag">-o</span> \
+  /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+<span class="cmt"># Tambahkan repo ke daftar sources:</span>
+<span class="cmd">echo</span> <span class="str">'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg]
+  https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /'</span> | \
+  <span class="cmd">sudo tee</span> /etc/apt/sources.list.d/kubernetes.list</pre>
+
+            <div class="steps-title">2 — Install kubelet, kubeadm, kubectl</div>
+            <pre><span class="cmd">sudo apt-get update</span>
+<span class="cmd">sudo apt-get install</span> <span class="flag">-y</span> kubelet kubeadm kubectl
+
+<span class="cmt"># Pin versi supaya tidak ter-upgrade otomatis.
+# Upgrade kubeadm/kubelet yang sembarangan bisa bikin cluster rusak:</span>
+<span class="cmd">sudo apt-mark hold</span> kubelet kubeadm kubectl</pre>
+
+            <div class="steps-title">3 — Enable kubelet</div>
+            <div class="step-label"><span style="--sc:#0f766e">CATATAN</span> kubelet akan terus restart (crash loop)
+              sampai ada konfigurasi dari kubeadm init/join. Ini normal — jangan panik.</div>
+            <pre><span class="cmd">sudo systemctl enable</span> --now kubelet</pre>
+
+            <div class="steps-title">4 — Join ke Cluster</div>
+            <div class="step-label"><span style="--sc:#0f766e">KENAPA</span> Perintah ini menginisiasi proses TLS
+              bootstrap antara worker dan Control Plane. Worker menggunakan token rahasia untuk membuktikan identitasnya
+              ke API Server. Setelah verifikasi berhasil, Control Plane mendaftarkan mesin ini ke cluster.</div>
+            <div class="step-label"><span style="--sc:#475569">PENTING</span> Jalankan di Worker 1 DAN Worker 2. Pakai
+              perintah join dari output <code>kubeadm init</code> di Control Plane — bukan yang di sini.</div>
+            <pre><span class="cmt"># Format perintahnya seperti ini (token & hash berbeda di setup kamu):</span>
+<span class="cmd">sudo kubeadm join</span> 172.31.x.x:6443 \
+  <span class="flag">--token</span> abcdef.1234567890abcdef \
+  <span class="flag">--discovery-token-ca-cert-hash</span> \
+  sha256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+<span class="cmt"># Tunggu sampai muncul:
+# "This node has joined the cluster."</span></pre>
+
+            <div class="steps-title">5 — Verifikasi dari Control Plane</div>
+            <div class="step-label"><span style="--sc:#475569">CATATAN</span> Jalankan ini di terminal Control Plane,
+              bukan worker.</div>
+            <pre><span class="cmd">kubectl get nodes</span>
+<span class="cmt"># Output yang diharapkan (NotReady = normal, CNI belum diinstall):
+NAME              STATUS     ROLES           AGE   VERSION
+ip-172-31-90-89   NotReady   control-plane   16h   v1.29.15
+worker1           NotReady   &lt;none&gt;          9s    v1.29.15
+worker2           NotReady   &lt;none&gt;          18s   v1.29.15</span></pre>
+            <div class="note-box">✅ Ketiga node muncul = worker berhasil join. Status <strong>NotReady</strong> normal —
+              akan berubah setelah Calico diinstall. Klik node <strong>Control Plane → Install CNI</strong>.</div>
+          </div>
+        </div>
+
+        <!-- CONTROL PLANE -->
+        <div class="panel-content" id="panel-cp">
+          <div class="phase-badge"
+            style="background:rgba(71,85,105,.1);border-color:rgba(71,85,105,.3);color:var(--slate);">🖥️ Phase 1 ·
+            Cluster Init</div>
+          <div class="panel-node-title">Control Plane</div>
+          <div class="panel-node-sub">EC2 t3.medium · API Server · etcd · Scheduler</div>
+          <div class="tabs">
+            <button class="tab-btn on" onclick="switchTab(event,'cp','what')">Apa Itu?</button>
+            <button class="tab-btn" onclick="switchTab(event,'cp','init')">kubeadm init</button>
+            <button class="tab-btn" onclick="switchTab(event,'cp','cni')">Install CNI</button>
+          </div>
+
+          <div class="tab-pane on" id="cp-what">
+            <div class="explanation">
+              Control Plane adalah <strong>otak cluster</strong>. Ia tidak pernah menjalankan aplikasimu — tugasnya
+              murni mengatur dan mengawasi state cluster.<br><br>
+              Setelah <code>kubeadm init</code>, empat komponen ini otomatis berjalan sebagai <strong>static
+                Pod</strong> di dalam Control Plane:
+            </div>
+            <div class="steps-title">4 Komponen Inti (dikelola otomatis)</div>
+            <pre><span class="str">kube-apiserver     </span><span class="cmt"># Pintu masuk semua perintah kubectl (port 6443)
+                   # Semua komponen lain berkomunikasi lewat sini</span>
+
+<span class="str">etcd               </span><span class="cmt"># Database key-value — menyimpan seluruh state cluster
+                   # Berisi: Pod apa saja yang ada, di node mana, dll</span>
+
+<span class="str">kube-scheduler     </span><span class="cmt"># Memutuskan Pod baru harus jalan di node mana
+                   # Mempertimbangkan: resources tersedia, affinity, dll</span>
+
+<span class="str">controller-manager </span><span class="cmt"># Memastikan kondisi aktual = kondisi yang diinginkan
+                   # Contoh: kalau Pod mati, dia yang trigger Pod baru</span></pre>
+            <div class="note-box">💡 Lakukan semua setup <strong>Worker Node</strong> dulu (OS Prep, Containerd,
+              kubeadm+kubelet) di ketiga server, baru kembali ke sini untuk jalankan <code>kubeadm init</code>.</div>
+          </div>
+
+          <div class="tab-pane" id="cp-init">
+            <div class="explanation">
+              Perintah <code>kubeadm init</code> dijalankan <strong>hanya di Control Plane</strong>. Ia akan: setup
+              etcd, menjalankan API server, membuat semua sertifikat TLS, dan menghasilkan perintah
+              <code>kubeadm join</code> yang perlu kamu simpan untuk Worker Nodes.
+            </div>
+
+            <div class="steps-title">1 — Inisialisasi Cluster</div>
+            <div class="step-label"><span style="--sc:#475569">PENTING</span> Gunakan private IP dari EC2 Control Plane,
+              bukan public IP. Public IP bisa berubah saat instance restart.</div>
+            <pre><span class="cmd">sudo kubeadm init</span> \
+  <span class="flag">--pod-network-cidr</span>=192.168.0.0/16 \
+  <span class="flag">--apiserver-advertise-address</span>=&lt;PRIVATE_IP_CP&gt;
+
+<span class="cmt"># --pod-network-cidr=192.168.0.0/16 wajib dipakai karena
+# kita akan install Calico yang menggunakan CIDR ini by default.</span></pre>
+
+            <div class="steps-title">2 — Setup kubectl di Control Plane</div>
+            <div class="step-label"><span style="--sc:#475569">KENAPA</span> kubectl butuh file kubeconfig di
+              ~/.kube/config untuk tahu cara konek ke API server dan dengan credential apa.</div>
+            <pre><span class="cmd">mkdir -p</span> $HOME/.kube
+<span class="cmd">sudo cp -i</span> /etc/kubernetes/admin.conf $HOME/.kube/config
+<span class="cmd">sudo chown</span> $(id <span class="flag">-u</span>):$(id <span class="flag">-g</span>) $HOME/.kube/config
+
+<span class="cmt"># Test — harus bisa jalan:</span>
+<span class="cmd">kubectl get nodes</span></pre>
+
+            <div class="steps-title">3 — Join Worker Nodes</div>
+            <div class="step-label"><span style="--sc:#475569">CATATAN</span> Setelah <code>kubeadm init</code> selesai,
+              output-nya akan menampilkan perintah join. Jalankan ini di Worker 1 DAN Worker 2:</div>
+            <pre><span class="cmt"># Contoh format (token dan hash akan berbeda di setup kamu):</span>
+<span class="cmd">sudo kubeadm join</span> &lt;PRIVATE_IP_CP&gt;:6443 \
+  <span class="flag">--token</span> &lt;token&gt; \
+  <span class="flag">--discovery-token-ca-cert-hash</span> sha256:&lt;hash&gt;
+
+<span class="cmt"># Kalau token sudah expired (24 jam), generate baru di CP:
+# sudo kubeadm token create --print-join-command</span></pre>
+
+            <div class="steps-title">4 — Verifikasi Semua Node Terdaftar</div>
+            <pre><span class="cmd">kubectl get nodes</span>
+<span class="cmt"># Output yang diharapkan (NotReady = normal, CNI belum diinstall):
+NAME            STATUS     ROLES
+control-plane   NotReady   control-plane
+worker-node-1   NotReady   &lt;none&gt;
+worker-node-2   NotReady   &lt;none&gt;</span></pre>
+            <div class="note-box">⚠️ Status <strong>NotReady</strong> setelah join adalah NORMAL. Node baru bisa Ready
+              setelah CNI (Calico) diinstall. Lanjut ke tab <strong>Install CNI</strong>.</div>
+          </div>
+
+          <div class="tab-pane" id="cp-cni">
+            <div class="explanation">
+              <strong>CNI (Container Network Interface)</strong> adalah plugin jaringan yang memungkinkan Pod di node
+              berbeda saling berkomunikasi. Kubernetes tidak membawa komponen bawaan untuk mengatur jaringan Pod — ia
+              mendelegasikan tugas routing ini ke CNI pihak ketiga.<br><br>
+              Kubelet di masing-masing node diprogram untuk menahan status <code>NotReady</code> sampai CNI terdeteksi,
+              untuk mencegah Pod dijadwalkan ke server yang belum punya jalur jaringan.<br><br>
+              Kita pakai <strong>Calico</strong>. Calico membuat virtual network interface, mengalokasikan IP dari blok
+              <code>192.168.0.0/16</code> yang kita definisikan saat <code>kubeadm init</code>, dan memodifikasi routing
+              table Linux agar Pod di Worker 1 bisa berkomunikasi langsung dengan Pod di Worker 2.
+            </div>
+
+            <div class="steps-title">1 — Install Calico (hanya di Control Plane)</div>
+            <pre><span class="cmd">kubectl apply -f</span> \
+  https://raw.githubusercontent.com/projectcalico/\
+calico/v3.26.4/manifests/calico.yaml
+
+<span class="cmt"># Output yang diharapkan:
+# daemonset.apps/calico-node created
+# deployment.apps/calico-kube-controllers created</span></pre>
+
+            <div class="steps-title">2 — Pantau Status Node Secara Real-Time</div>
+            <div class="step-label"><span style="--sc:#475569">KENAPA</span> Flag <code>-w</code> (watch) membuat
+              terminal menahan prompt dan mencetak baris baru setiap ada perubahan status. Sistem butuh 1-2 menit untuk
+              download dan menjalankan Calico di semua node.</div>
+            <pre><span class="cmd">kubectl get nodes</span> <span class="flag">-w</span>
+
+<span class="cmt"># Contoh output nyata — awalnya NotReady, lalu berubah bertahap:</span>
+NAME              STATUS     ROLES           AGE     VERSION
+ip-172-31-90-89   NotReady   control-plane   16h     v1.29.15
+worker1           NotReady   &lt;none&gt;          3m40s   v1.29.15
+worker2           NotReady   &lt;none&gt;          3m49s   v1.29.15
+worker1           <span class="cmd">Ready</span>      &lt;none&gt;          3m44s   v1.29.15
+worker2           <span class="cmd">Ready</span>      &lt;none&gt;          3m54s   v1.29.15
+ip-172-31-90-89   <span class="cmd">Ready</span>      control-plane   16h     v1.29.15
+<span class="cmt"># Tekan Ctrl+C untuk keluar dari mode watch</span></pre>
+
+            <div class="steps-title">3 — Verifikasi Pod Calico Berjalan</div>
+            <pre><span class="cmd">kubectl get pods</span> <span class="flag">-n</span> kube-system
+<span class="cmt"># Pastikan semua pod calico-* statusnya Running:
+# calico-kube-controllers-xxx   Running
+# calico-node-xxx (per node)    Running</span></pre>
+            <div class="note-box">✅ Semua node <strong>Ready</strong> dan Calico pods <strong>Running</strong> = cluster
+              fully operational. Phase 1 selesai! Lanjut ke node <strong>NGINX Ingress</strong>.</div>
+          </div>
+        </div>
+
+        <!-- NGINX INGRESS -->
+        <div class="panel-content" id="panel-ingress">
+          <div class="phase-badge"
+            style="background:rgba(109,40,217,.1);border-color:rgba(109,40,217,.3);color:var(--purple);">🚪 Phase 2 ·
+            Edge Networking</div>
+          <div class="panel-node-title">NGINX Ingress</div>
+          <div class="panel-node-sub">Reverse proxy · Port 80/443 · Namespace ingress-nginx</div>
+          <div class="tabs">
+            <button class="tab-btn on" onclick="switchTab(event,'ingress','what')">Apa Itu?</button>
+            <button class="tab-btn" onclick="switchTab(event,'ingress','install')">Install</button>
+            <button class="tab-btn" onclick="switchTab(event,'ingress','troubleshoot')">Troubleshoot</button>
+          </div>
+
+          <div class="tab-pane on" id="ingress-what">
+            <div class="explanation">
+              Secara bawaan, Pod dan Service di dalam Kubernetes sifatnya tertutup — mereka hanya punya IP internal
+              cluster. <strong>Ingress Controller</strong> berfungsi sebagai reverse proxy yang mengelola akses dari
+              luar masuk ke dalam cluster.<br><br>
+              Komponen ini akan:<br>
+              • Membuka port HTTP (80) dan HTTPS (443) di level node<br>
+              • Menerima traffic yang masuk dari AWS Security Group<br>
+              • Membaca <strong>aturan routing berdasarkan nama domain</strong> (seperti rall4sre.my.id)<br>
+              • Meneruskan traffic ke Service yang tepat di dalam cluster<br><br>
+              Berbeda dengan k3s yang sudah bundle Traefik otomatis, Kubeadm tidak include Ingress Controller — kita
+              install sendiri.
+            </div>
+            <div class="note-box">💡 Proses install otomatis membuat namespace baru bernama
+              <strong>ingress-nginx</strong> dan menjalankan beberapa komponen pengontrolnya di sana.
+            </div>
+          </div>
+
+          <div class="tab-pane" id="ingress-install">
+            <div class="explanation">Jalankan <strong>hanya di Control Plane</strong>. Perintah ini akan deploy NGINX
+              Ingress Controller menggunakan manifest untuk bare-metal (bukan cloud provider).</div>
+
+            <div class="steps-title">1 — Deploy Ingress Controller</div>
+            <pre><span class="cmd">kubectl apply -f</span> https://raw.githubusercontent.com/\
+kubernetes/ingress-nginx/\
+controller-v1.9.6/deploy/static/provider/baremetal/deploy.yaml</pre>
+
+            <div class="steps-title">2 — Pantau Status Pod</div>
+            <div class="step-label"><span style="--sc:#6d28d9">CATATAN</span> Tunggu sampai pod
+              <code>ingress-nginx-controller-*</code> berstatus <code>Running</code>.
+            </div>
+            <pre><span class="cmd">kubectl get pods</span> <span class="flag">-n</span> ingress-nginx <span class="flag">-w</span>
+
+<span class="cmt"># Output yang diharapkan:</span>
+NAME                                       READY   STATUS
+ingress-nginx-admission-create-8xfth       0/1     <span class="str">Completed</span>
+ingress-nginx-admission-patch-mh7wh        0/1     <span class="str">Completed</span>
+ingress-nginx-controller-85bd4fcd7-czh52   1/1     <span class="cmd">Running</span>
+
+<span class="cmt"># Tekan Ctrl+C kalau sudah Running</span></pre>
+            <div class="note-box">✅ Pod controller <strong>Running</strong> = pintu masuk traffic dari luar cluster
+              sudah terbuka. Lanjut ke node <strong>Namespace + ConfigMap</strong> di sebelah kanan.</div>
+          </div>
+
+          <div class="tab-pane" id="ingress-troubleshoot">
+            <div class="explanation">
+              Dua masalah nyata yang terjadi di tahap ini: <strong>webhook timeout</strong> saat apply Ingress, dan
+              <strong>ERR_CONNECTION_TIMED_OUT</strong> di browser meski DNS sudah benar.
+            </div>
+
+            <div class="steps-title">Masalah 1 — Webhook Timeout saat kubectl apply</div>
+            <div class="step-label"><span style="--sc:#b91c1c">ERROR</span>
+              <code>failed calling webhook "validate.nginx.ingress.kubernetes.io": context deadline exceeded</code>
+            </div>
+            <div class="explanation" style="font-size:11.5px;">
+              Error ini terjadi karena Control Plane statusnya <code>NotReady</code>. API Server mencoba menghubungi Pod
+              webhook NGINX untuk validasi YAML, tapi karena jaringan internal cluster tidak berfungsi, request-nya
+              timeout.<br><br>
+              <strong>Root cause paling umum: hostname mismatch.</strong> Jika kamu mengganti hostname OS jadi
+              <code>controlplane</code> <em>setelah</em> <code>kubeadm init</code> dijalankan, saat EC2 reboot kubelet
+              membaca nama baru tersebut dan mencoba daftar sebagai node baru bernama "controlplane". Tapi database
+              cluster sudah mencatat node dengan nama <code>ip-172-31-90-89</code> — Node Authorizer langsung memblokir.
+            </div>
+            <pre><span class="cmt"># Log error yang mengkonfirmasi hostname mismatch:</span>
+E kubelet_node_status.go: "Unable to register node with API server"
+  err=<span class="str">"nodes \"controlplane\" is forbidden: node
+  \"ip-172-31-90-89\" is not allowed to modify node \"controlplane\""</span>
+
+<span class="cmt"># Fix: kembalikan hostname OS ke nama yang dikenal Kubernetes</span>
+<span class="cmd">sudo hostnamectl set-hostname</span> ip-172-31-90-89
+<span class="cmd">sudo systemctl restart</span> kubelet
+
+<span class="cmt"># Tunggu ~15 detik, lalu verifikasi:</span>
+<span class="cmd">kubectl get nodes</span>
+<span class="cmt"># ip-172-31-90-89 harus kembali Ready</span>
+
+<span class="cmt"># Baru apply ulang ingress:</span>
+<span class="cmd">kubectl apply -f</span> ingress.yaml</pre>
+            <div class="note-box">⚠️ <strong>Kenapa worker node tidak kena?</strong> Worker mengganti hostname
+              <em>sebelum</em> <code>kubeadm join</code>, jadi nama <code>worker1</code>/<code>worker2</code> langsung
+              terdaftar dari awal. Control Plane mengganti hostname <em>setelah</em> <code>kubeadm init</code> — Kubeadm
+              sudah menanamkan nama lama ke dalam sertifikat TLS. Nama node di Kubernetes bersifat
+              <strong>immutable</strong> — satu-satunya fix aman adalah mengembalikan hostname OS-nya.
+            </div>
+
+            <div class="steps-title">Masalah 2 — ERR_CONNECTION_TIMED_OUT di Browser</div>
+            <div class="explanation" style="font-size:11.5px;">
+              Manifest baremetal NGINX Ingress secara otomatis mengatur Service dalam mode <strong>NodePort</strong>.
+              Artinya NGINX tidak mendengarkan di port 80 fisik EC2 — ia mendengarkan di port acak
+              (30000–32767).<br><br>
+              Saat browser request ke <code>rall4sre.my.id:80</code>, OS Ubuntu di worker node tidak ada proses yang
+              dengerin port 80 → koneksi timeout.
+            </div>
+            <pre><span class="cmt"># Verifikasi mode NodePort:</span>
+<span class="cmd">kubectl get svc</span> <span class="flag">-n</span> ingress-nginx
+<span class="cmt"># Output menunjukkan port acak tinggi:
+NAME                       TYPE       PORT(S)
+ingress-nginx-controller   NodePort   80:<span class="flag">31636</span>/TCP,443:31374/TCP
+#                                        ↑ ini masalahnya, bukan 80</span>
+
+<span class="cmt"># Fix: patch Deployment agar pakai hostNetwork</span>
+<span class="cmd">kubectl patch deployment</span> ingress-nginx-controller \
+  <span class="flag">-n</span> ingress-nginx \
+  <span class="flag">-p</span> <span class="str">'{"spec": {"replicas": 2, "template": {"spec": {
+    "hostNetwork": true,
+    "dnsPolicy": "ClusterFirstWithHostNet"
+  }}}}'</span>
+
+<span class="cmt"># Pantau sampai 2 Pod Running di node berbeda:
+# hostNetwork: true  → NGINX bind langsung ke port 80/443 OS fisik EC2
+# replicas: 2        → 1 Pod di worker1, 1 Pod di worker2 (port 80 per node)
+# dnsPolicy: ...     → wajib saat hostNetwork, agar NGINX tetap bisa
+#                      resolve nama Service internal Kubernetes</span>
+<span class="cmd">kubectl get pods</span> <span class="flag">-n</span> ingress-nginx <span class="flag">-o wide</span>
+<span class="cmt"># Pastikan kolom NODE menunjukkan worker1 DAN worker2</span></pre>
+            <div class="note-box">🎉 Setelah hostNetwork aktif dan kedua Pod Running di worker berbeda → reload browser
+              → <strong>Welcome to nginx!</strong> = infrastruktur end-to-end berhasil!</div>
+          </div>
+        </div>
+
+        <!-- NAMESPACE + CONFIGMAP -->
+        <div class="panel-content" id="panel-configmap">
+          <div class="phase-badge"
+            style="background:rgba(22,101,52,.1);border-color:rgba(22,101,52,.3);color:var(--green);">📋 Phase 2 ·
+            Foundation</div>
+          <div class="panel-node-title">Namespace + ConfigMap</div>
+          <div class="panel-node-sub">sre-production · backend-config · foundation.yaml</div>
+          <div class="explanation">
+            Setelah NGINX Ingress siap, kita buat fondasi untuk aplikasi di dalam cluster. Dua resource ini dibuat
+            bersamaan dalam satu file manifest.<br><br>
+            <strong>Namespace</strong> memisahkan resource antar project — mencegah bentrok nama dan mengisolasi
+            <code>sre-production</code> dari komponen sistem seperti <code>kube-system</code> atau
+            <code>ingress-nginx</code>.<br><br>
+            <strong>ConfigMap</strong> memisahkan konfigurasi dari kode aplikasi. Pod API nanti akan baca variabel
+            environment dari sini. Kalau Redis dipindah, cukup ubah ConfigMap — tidak perlu build ulang image aplikasi.
+          </div>
+
+          <div class="steps-title">1 — Buat File foundation.yaml</div>
+          <div class="step-label"><span style="--sc:#166534">JALANKAN DI</span> terminal Control Plane</div>
+          <pre><span class="cmd">nano foundation.yaml</span></pre>
+          <div class="step-label"><span style="--sc:#166534">ISI FILE</span> Paste konfigurasi berikut, lalu simpan
+            (Ctrl+O, Enter, Ctrl+X):</div>
+          <pre><span class="str">apiVersion:</span> v1
+<span class="str">kind:</span> Namespace
+<span class="str">metadata:</span>
+  <span class="kw">name:</span> sre-production
+<span class="flag">---</span>
+<span class="str">apiVersion:</span> v1
+<span class="str">kind:</span> ConfigMap
+<span class="str">metadata:</span>
+  <span class="kw">name:</span>      backend-config
+  <span class="kw">namespace:</span> sre-production
+<span class="str">data:</span>
+  <span class="kw">REDIS_HOST:</span> <span class="str">"redis-service"</span>   <span class="cmt"># nama Service Redis di dalam cluster</span>
+  <span class="kw">REDIS_PORT:</span> <span class="str">"6379"</span>           <span class="cmt"># port default Redis</span>
+  <span class="kw">APP_ENV:</span>    <span class="str">"production"</span>      <span class="cmt"># environment flag untuk aplikasi</span></pre>
+
+          <div class="steps-title">2 — Apply ke Cluster</div>
+          <pre><span class="cmd">kubectl apply -f</span> foundation.yaml
+
+<span class="cmt"># Output yang diharapkan:
+# namespace/sre-production created
+# configmap/backend-config created</span></pre>
+
+          <div class="steps-title">3 — Verifikasi</div>
+          <pre><span class="cmd">kubectl get namespaces</span>
+<span class="cmt"># Harus ada sre-production:
+# NAME              STATUS   AGE
+# default           Active   17h
+# ingress-nginx     Active   9m32s
+# kube-system       Active   17h
+# sre-production    <span class="cmd">Active</span>   10s</span>
+
+<span class="cmd">kubectl get configmaps</span> <span class="flag">-n</span> sre-production
+<span class="cmt"># Harus ada backend-config:
+# NAME               DATA   AGE
+# backend-config     3      10s
+# kube-root-ca.crt   1      10s</span></pre>
+
+          <div class="note-box">✅ Namespace <strong>sre-production Active</strong> dan ConfigMap
+            <strong>backend-config</strong> ada dengan 3 data = fondasi siap. Lanjut ke deploy Redis + Persistent
+            Volume!
+          </div>
+        </div>
+
+        <!-- API PODS -->
+        <div class="panel-content" id="panel-apipod">
+          <div class="shared-badge">⚡ Satu Deployment — 2 Replica, ConfigMap di-inject otomatis</div>
+          <div class="phase-badge"
+            style="background:rgba(22,101,52,.1);border-color:rgba(22,101,52,.3);color:var(--green);">🏃 Phase 3 ·
+            Workload</div>
+          <div class="panel-node-title">API Pods</div>
+          <div class="panel-node-sub">Deployment · replicas: 2 · nginx:alpine placeholder</div>
+          <div class="tabs">
+            <button class="tab-btn on" onclick="switchTab(event,'apipod','deploy')">Deploy</button>
+            <button class="tab-btn" onclick="switchTab(event,'apipod','troubleshoot')">Troubleshoot</button>
+            <button class="tab-btn" onclick="switchTab(event,'apipod','howworks')">Cara Kerjanya</button>
+          </div>
+
+          <div class="tab-pane on" id="apipod-deploy">
+            <div class="explanation">
+              Kita deploy <strong>2 replica</strong> Pod backend sekaligus Service-nya dalam satu file. Image yang
+              dipakai saat ini adalah <code>nginx:alpine</code> sebagai <strong>placeholder</strong> — berfungsi untuk
+              memvalidasi bahwa infrastruktur routing sudah benar sebelum kamu masukkan kode aplikasimu sendiri.
+            </div>
+
+            <div class="steps-title">1 — Buat File backend.yaml</div>
+            <div class="step-label"><span style="--sc:#166534">JALANKAN DI</span> terminal Control Plane</div>
+            <pre><span class="cmd">nano backend.yaml</span></pre>
+
+            <div class="step-label"><span style="--sc:#166534">ISI FILE</span> Paste seluruh blok berikut, lalu simpan
+              (Ctrl+O, Enter, Ctrl+X):</div>
+            <pre><span class="cmt"># ── Deployment: 2 replica Pod backend ───────────────</span>
+<span class="str">apiVersion:</span> apps/v1
+<span class="str">kind:</span> Deployment
+<span class="str">metadata:</span>
+  <span class="kw">name:</span>      backend-api
+  <span class="kw">namespace:</span> sre-production
+<span class="str">spec:</span>
+  <span class="kw">replicas:</span> 2
+  <span class="kw">selector:</span>
+    <span class="kw">matchLabels:</span>
+      <span class="kw">app:</span> backend
+  <span class="kw">template:</span>
+    <span class="kw">metadata:</span>
+      <span class="kw">labels:</span>
+        <span class="kw">app:</span> backend
+    <span class="kw">spec:</span>
+      <span class="kw">containers:</span>
+      - <span class="kw">name:</span>  api
+        <span class="kw">image:</span> nginx:alpine        <span class="cmt"># ganti dengan image app kamu nanti</span>
+        <span class="kw">ports:</span>
+        - <span class="kw">containerPort:</span> 80
+        <span class="kw">envFrom:</span>
+        - <span class="kw">configMapRef:</span>
+            <span class="kw">name:</span> backend-config   <span class="cmt"># inject REDIS_HOST, REDIS_PORT, APP_ENV</span>
+<span class="flag">---</span>
+<span class="cmt"># ── Service: ClusterIP internal load balancer ────────</span>
+<span class="str">apiVersion:</span> v1
+<span class="str">kind:</span> Service
+<span class="str">metadata:</span>
+  <span class="kw">name:</span>      backend-api
+  <span class="kw">namespace:</span> sre-production
+<span class="str">spec:</span>
+  <span class="kw">selector:</span>
+    <span class="kw">app:</span> backend
+  <span class="kw">ports:</span>
+  - <span class="kw">protocol:</span>   TCP
+    <span class="kw">port:</span>       3000         <span class="cmt"># port yang ditarget oleh Ingress</span>
+    <span class="kw">targetPort:</span> 80           <span class="cmt"># port di dalam container nginx</span></pre>
+
+            <div class="steps-title">2 — Deploy ke Cluster</div>
+            <pre><span class="cmd">kubectl apply -f</span> backend.yaml
+
+<span class="cmt"># Output yang diharapkan:
+# deployment.apps/backend-api created
+# service/backend-api created</span></pre>
+
+            <div class="steps-title">3 — Verifikasi (flag -o wide menampilkan NODE)</div>
+            <pre><span class="cmd">kubectl get pods,svc</span> <span class="flag">-n</span> sre-production <span class="flag">-o wide</span>
+
+<span class="cmt"># Yang diharapkan — kedua Pod Running di worker berbeda:
+NAME                                   READY   STATUS    NODE
+pod/backend-api-79d9f68855-ncwcf       1/1     <span class="cmd">Running</span>   worker2
+pod/backend-api-79d9f68855-s64ll       1/1     <span class="cmd">Running</span>   worker2
+pod/redis-deployment-94b8fbd56-wfnfw   1/1     Running   worker2
+
+NAME                  TYPE        CLUSTER-IP       PORT(S)
+service/backend-api   ClusterIP   10.109.102.21    3000/TCP
+service/redis-service ClusterIP   10.104.100.91    6379/TCP</span></pre>
+            <div class="note-box">✅ Kedua Pod <strong>Running</strong> = backend API siap. Lanjut klik node
+              <strong>Service backend-api</strong> untuk pasang Ingress Rule!
+            </div>
+          </div>
+
+          <div class="tab-pane" id="apipod-troubleshoot">
+            <div class="explanation">
+              Kalau Pod berstatus <strong>Pending</strong> setelah deploy, ini hampir pasti terjadi karena Worker Node
+              statusnya <code>NotReady</code> — paling sering akibat EC2 yang di-stop/reboot lalu kubelet gagal start
+              otomatis karena swap aktif lagi.
+            </div>
+
+            <div class="steps-title">1 — Cek Status Node</div>
+            <pre><span class="cmd">kubectl get nodes</span>
+<span class="cmt"># Kalau ada yang NotReady:
+NAME              STATUS     ROLES
+worker1           NotReady   &lt;none&gt;   ← masalah di sini
+worker2           NotReady   &lt;none&gt;</span></pre>
+
+            <div class="steps-title">2 — Cari Root Cause di Event Pod</div>
+            <pre><span class="cmd">kubectl describe pod</span> &lt;nama-pod&gt; <span class="flag">-n</span> sre-production
+<span class="cmt"># Lihat bagian Events paling bawah:
+# "0/3 nodes are available: 1 node(s) had untolerated taint
+#  {node-role.kubernetes.io/control-plane}, 2 node(s) had
+#  untolerated taint {node.kubernetes.io/unreachable}"
+#
+# → worker1 dan worker2 unreachable = kubelet tidak jalan</span></pre>
+
+            <div class="steps-title">3 — Fix di Worker Node (SSH ke masing-masing worker)</div>
+            <div class="step-label"><span style="--sc:#b91c1c">PENTING</span> Public IP EC2 berubah setelah stop/start —
+              cek di AWS Console dulu.</div>
+            <pre><span class="cmt"># Jalankan di worker1 DAN worker2:</span>
+<span class="cmd">sudo swapoff -a</span>
+<span class="cmd">sudo systemctl restart</span> containerd
+<span class="cmd">sudo systemctl restart</span> kubelet</pre>
+
+            <div class="steps-title">4 — Verifikasi di Control Plane</div>
+            <pre><span class="cmd">kubectl get nodes</span>
+<span class="cmt"># Tunggu sampai kembali Ready:
+NAME              STATUS   ROLES
+worker1           <span class="cmd">Ready</span>    &lt;none&gt;
+worker2           <span class="cmd">Ready</span>    &lt;none&gt;</span></pre>
+            <div class="note-box">✅ Begitu node <strong>Ready</strong>, Kubernetes otomatis menjadwalkan ulang Pod yang
+              tadinya Pending. Tidak perlu <code>kubectl apply</code> ulang.</div>
+          </div>
+
+          <div class="tab-pane" id="apipod-howworks">
+            <div class="explanation">
+              <strong>Kenapa 2 replica?</strong> High availability — kalau Worker Node 1 mati, Pod di Worker Node 2
+              tetap melayani traffic. Service otomatis hanya route ke Pod yang sehat.<br><br>
+              <strong>Stateless</strong> artinya Pod tidak simpan data apapun. Semua state (session, cache) ada di
+              Redis. Ini yang membuat Pod bisa di-restart atau di-scale kapan saja tanpa kehilangan data.<br><br>
+              <strong>nginx:alpine sebagai placeholder</strong>: Ini image dummy yang langsung Running tanpa konfigurasi
+              apapun. Fungsinya untuk memvalidasi bahwa alur routing dari Ingress → Service → Pod sudah benar sebelum
+              kamu deploy kode aplikasi real. Nanti tinggal ganti nilai <code>image:</code> dan sesuaikan
+              <code>targetPort</code>.
+            </div>
+            <div class="steps-title">Cara Ganti ke Aplikasi Real</div>
+            <pre><span class="cmt"># Edit backend.yaml, ubah bagian ini:</span>
+<span class="str">image:</span> nginx:alpine
+<span class="cmt"># → ganti menjadi:</span>
+<span class="str">image:</span> your-dockerhub-username/your-api:v1.0.0
+
+<span class="cmt"># Sesuaikan juga port-nya:</span>
+<span class="str">containerPort:</span> 3000    <span class="cmt"># port yang dipakai app kamu</span>
+<span class="str">targetPort:</span>    3000    <span class="cmt"># harus sama dengan containerPort</span>
+
+<span class="cmt"># Lalu apply ulang:</span>
+<span class="cmd">kubectl apply -f</span> backend.yaml   <span class="cmt"># rolling update otomatis</span></pre>
+          </div>
+        </div>
+
+        <!-- SVC API -->
+        <div class="panel-content" id="panel-svcapi">
+          <div class="phase-badge"
+            style="background:rgba(22,101,52,.1);border-color:rgba(22,101,52,.3);color:var(--green);">⚙️ Phase 3 · Final
+            Step</div>
+          <div class="panel-node-title">Service backend-api + Ingress Rule</div>
+          <div class="panel-node-sub">ClusterIP · Ingress routing rall4sre.my.id → port 3000</div>
+          <div class="tabs">
+            <button class="tab-btn on" onclick="switchTab(event,'svcapi','ingress')">Pasang Ingress Rule</button>
+            <button class="tab-btn" onclick="switchTab(event,'svcapi','howworks')">Cara Kerjanya</button>
+          </div>
+
+          <div class="tab-pane on" id="svcapi-ingress">
+            <div class="explanation">
+              Ini adalah <strong>langkah terakhir</strong>. NGINX Ingress Controller sudah berjalan, tapi ia belum tahu
+              harus meneruskan traffic ke Service mana. Ingress Rule adalah "buku tamu" yang memberitahu NGINX:
+              <em>"Kalau ada request masuk dengan nama domain <code>rall4sre.my.id</code>, arahkan ke Service
+                <code>backend-api</code> port 3000."</em>
+            </div>
+
+            <div class="steps-title">1 — Buat & Deploy ingress.yaml</div>
+            <div class="step-label"><span style="--sc:#166534">JALANKAN DI</span> terminal Control Plane</div>
+            <pre><span class="cmd">nano ingress.yaml</span></pre>
+            <pre><span class="str">apiVersion:</span> networking.k8s.io/v1
+<span class="str">kind:</span> Ingress
+<span class="str">metadata:</span>
+  <span class="kw">name:</span>      main-ingress
+  <span class="kw">namespace:</span> sre-production
+  <span class="kw">annotations:</span>
+    <span class="kw">nginx.ingress.kubernetes.io/rewrite-target:</span> <span class="str">/</span>
+<span class="str">spec:</span>
+  <span class="kw">ingressClassName:</span> nginx
+  <span class="kw">rules:</span>
+  - <span class="kw">host:</span> <span class="str">rall4sre.my.id</span>
+    <span class="kw">http:</span>
+      <span class="kw">paths:</span>
+      - <span class="kw">path:</span>     <span class="str">/</span>
+        <span class="kw">pathType:</span> Prefix
+        <span class="kw">backend:</span>
+          <span class="kw">service:</span>
+            <span class="kw">name:</span> backend-api
+            <span class="kw">port:</span>
+              <span class="kw">number:</span> 3000</pre>
+            <pre><span class="cmd">kubectl apply -f</span> ingress.yaml
+<span class="cmt"># ingress.networking.k8s.io/main-ingress created</span></pre>
+
+            <div class="steps-title">2 — Setup Elastic IP di AWS (Rekomendasi Wajib)</div>
+            <div class="explanation" style="font-size:11.5px;">
+              Public IP EC2 berubah setiap kali instance di-stop/start. Tanpa Elastic IP, kamu harus update DNS setiap
+              reboot. Control Plane <strong>tidak perlu</strong> Elastic IP karena tidak menerima traffic web — hanya
+              Worker Node yang jadi pintu masuk trafik.
+            </div>
+            <pre><span class="cmt"># Di AWS Console → EC2 → Elastic IPs:
+# 1. Allocate 2 Elastic IP baru
+# 2. Associate EIP-1 → instance worker1
+# 3. Associate EIP-2 → instance worker2
+
+# Kenapa CP tidak perlu EIP?
+# - Control plane punya taint NoSchedule → Pod NGINX tidak berjalan di sana
+# - Port 80/443 hanya terbuka di Worker Node (tempat NGINX berjalan)
+# - Traffic aplikasi tidak boleh masuk ke Control Plane (prinsip isolasi SRE)</span></pre>
+
+            <div class="steps-title">3 — Setup DNS A Record</div>
+            <div class="step-label"><span style="--sc:#6d28d9">DI DNS PROVIDER</span> (Cloudflare, Hostinger,
+              Niagahoster, Route 53, dll)</div>
+            <pre><span class="cmt"># Buat DUA A Record — DNS Round Robin ke kedua worker:</span>
+<span class="str">Type: A</span>  |  <span class="str">Name: @</span>  |  <span class="str">Value: &lt;Elastic IP worker1&gt;</span>  |  TTL: Auto
+<span class="str">Type: A</span>  |  <span class="str">Name: @</span>  |  <span class="str">Value: &lt;Elastic IP worker2&gt;</span>  |  TTL: Auto
+
+<span class="cmt"># Dengan 2 A Record, DNS Round Robin mendistribusikan trafik
+# ke kedua worker secara otomatis. Kalau 1 worker mati,
+# trafik diarahkan ke worker satunya.
+
+# Cek propagasi DNS dari terminal lokal kamu:</span>
+<span class="cmd">ping</span> rall4sre.my.id
+<span class="cmt"># IP yang muncul harus salah satu Elastic IP worker kamu</span></pre>
+
+            <div class="steps-title">4 — Pastikan Security Group Buka Port 80</div>
+            <pre><span class="cmt"># Di Security Group instance worker1 dan worker2:
+# Tambahkan Inbound Rule:
+#   Type: HTTP  |  Port: 80  |  Source: 0.0.0.0/0
+#   Type: HTTPS |  Port: 443 |  Source: 0.0.0.0/0</span></pre>
+
+            <div class="steps-title">5 — Fix hostNetwork (NGINX baremetal pakai NodePort by default)</div>
+            <div class="explanation" style="font-size:11.5px;">
+              Kalau browser masih <code>ERR_CONNECTION_TIMED_OUT</code> padahal DNS dan Security Group sudah benar,
+              berarti NGINX tidak mendengarkan di port 80 fisik — ia di-assign ke port acak NodePort. Fix dengan patch
+              hostNetwork:
+            </div>
+            <pre><span class="cmd">kubectl patch deployment</span> ingress-nginx-controller \
+  <span class="flag">-n</span> ingress-nginx \
+  <span class="flag">-p</span> <span class="str">'{"spec": {"replicas": 2, "template": {"spec": {
+    "hostNetwork": true,
+    "dnsPolicy": "ClusterFirstWithHostNet"
+  }}}}'</span>
+
+<span class="cmt"># Pantau sampai 2 Pod Running di node berbeda:</span>
+<span class="cmd">kubectl get pods</span> <span class="flag">-n</span> ingress-nginx <span class="flag">-o wide</span>
+<span class="cmt"># NAME                              READY   NODE
+# ingress-nginx-controller-xxx-aaa  1/1     worker1  ← 1 Pod di worker1
+# ingress-nginx-controller-xxx-bbb  1/1     worker2  ← 1 Pod di worker2</span></pre>
+
+            <div class="steps-title">6 — Verifikasi End-to-End</div>
+            <pre><span class="cmt"># Dari terminal lokal (bukan server AWS):</span>
+<span class="cmd">ping</span> rall4sre.my.id   <span class="cmt"># harus balas dengan IP worker</span>
+
+<span class="cmt"># Lalu buka browser:</span>
+http://rall4sre.my.id
+<span class="cmt"># → "Welcome to nginx!" = SUKSES! 🎉
+#
+# Artinya alur ini berjalan penuh:
+# Browser → DNS → Elastic IP Worker → Security Group →
+# NGINX Ingress (hostNetwork) → Service backend-api →
+# API Pod → ConfigMap → redis-service → Redis Pod → PVC</span></pre>
+            <div class="note-box">🎉 <strong>YOU DAMN RIGHT IT FREAKING WORKS!!</strong> Infrastruktur Kubernetes
+              baremetal end-to-end selesai. Semua komponen di flowchart terhubung dan berjalan.</div>
+          </div>
+
+          <div class="tab-pane" id="svcapi-howworks">
+            <div class="explanation">
+              <strong>Service backend-api</strong> memberikan satu IP virtual yang tidak pernah berubah walau Pod-nya
+              restart berkali-kali. NGINX Ingress selalu target IP ini, lalu kube-proxy mendistribusikan traffic secara
+              round-robin ke semua Pod yang match label <code>app: backend</code>.<br><br>
+              Tipe <strong>ClusterIP</strong> — hanya bisa diakses dari dalam cluster. External traffic masuk lewat
+              jalur: Internet → Security Group → Worker Node → NGINX Ingress → Service backend-api (ClusterIP) → Pod.
+            </div>
+            <div class="steps-title">Alur Traffic Lengkap</div>
+            <pre><span class="str">Browser</span>: rall4sre.my.id
+  ↓ DNS resolve → Public IP Worker Node
+<span class="str">AWS Security Group</span>: allow port 80/443
+  ↓
+<span class="str">NGINX Ingress Controller</span>: baca Host header
+  → match rule: rall4sre.my.id → backend-api:3000
+  ↓
+<span class="str">Service backend-api</span>: ClusterIP 10.109.102.21:3000
+  → kube-proxy round-robin ke Pod:
+  ↓                    ↓
+<span class="str">Pod replica 1</span>    <span class="str">Pod replica 2</span>
+  → envFrom ConfigMap → REDIS_HOST=redis-service
+  ↓
+<span class="str">Service redis-service</span>: ClusterIP :6379
+  ↓
+<span class="str">Redis Pod</span>: data di /data → PVC → disk Worker Node</pre>
+          </div>
+        </div>
+
+        <!-- REDIS -->
+        <div class="panel-content" id="panel-redis">
+          <div class="shared-badge">⚡ Redis Pod + Redis Service + PVC — satu file manifest</div>
+          <div class="phase-badge"
+            style="background:rgba(185,28,28,.1);border-color:rgba(185,28,28,.3);color:var(--red);">🗄️ Phase 2 · Data
+            Layer</div>
+          <div class="panel-node-title">Redis Cache</div>
+          <div class="panel-node-sub">redis:7-alpine · ClusterIP :6379 · appendonly yes</div>
+          <div class="tabs">
+            <button class="tab-btn on" onclick="switchTab(event,'redis','provisioner')">Storage Provisioner</button>
+            <button class="tab-btn" onclick="switchTab(event,'redis','deploy')">Deploy Redis</button>
+            <button class="tab-btn" onclick="switchTab(event,'redis','howworks')">Cara Kerjanya</button>
+          </div>
+
+          <div class="tab-pane on" id="redis-provisioner">
+            <div class="explanation">
+              Sebelum deploy Redis, ada satu hal krusial: karena cluster ini dibangun dengan Kubeadm dari nol (bukan AWS
+              EKS yang terkelola), cluster kita <strong>belum punya driver untuk memotong disk EC2 secara
+                otomatis</strong> saat diminta oleh PVC.<br><br>
+              Kita harus install komponen tambahan bernama <strong>Local Path Provisioner</strong>. Tugasnya:
+              mendengarkan permintaan PVC dan secara otomatis membuatkan direktori fisik di dalam disk Worker Node
+              tempat Pod dijadwalkan. Secara fisik, data tersimpan di volume EBS milik EC2 Worker Node (biasanya di path
+              <code>/opt/local-path-provisioner/...</code>).
+            </div>
+
+            <div class="steps-title">Kenapa Tanpa Ini PVC Nyangkut di Pending?</div>
+            <div class="explanation" style="font-size:11.5px;">
+              PVC hanyalah sebuah <strong>dokumen request</strong>. Saat kamu deploy PVC, kamu hanya mengirim pesan ke
+              API Server: <em>"Saya butuh storage 1GB ReadWriteOnce"</em>. API Server mencatat permintaan ini ke etcd,
+              tapi <strong>tidak bisa langsung mengalokasikan disk</strong> — ia hanya mencatat dan menunggu komponen
+              lain memprosesnya.<br><br>
+              Komponen yang memproses itu namanya <strong>Storage Provisioner</strong>. Di AWS EKS sudah ada EBS
+              Provisioner bawaan. Di cluster manual kita, tidak ada sama sekali — jadi PVC akan tertahan di
+              <code>Pending</code> selamanya kalau kita tidak install provisioner-nya sendiri.
+            </div>
+
+            <div class="steps-title">1 — Install Local Path Provisioner</div>
+            <div class="step-label"><span style="--sc:#b91c1c">JALANKAN DI</span> terminal Control Plane</div>
+            <pre><span class="cmd">kubectl apply -f</span> https://raw.githubusercontent.com/\
+rancher/local-path-provisioner/\
+v0.0.26/deploy/local-path-storage.yaml</pre>
+
+            <div class="steps-title">2 — Jadikan Default Storage Class</div>
+            <div class="step-label"><span style="--sc:#b91c1c">KENAPA</span> Perintah patch ini menandai
+              <code>local-path</code> sebagai storage class default, sehingga setiap PVC yang tidak menyebutkan storage
+              class secara eksplisit akan otomatis menggunakan provisioner ini.
+            </div>
+            <pre><span class="cmd">kubectl patch storageclass</span> local-path \
+  <span class="flag">-p</span> <span class="str">'{"metadata": {"annotations":{
+    "storageclass.kubernetes.io/is-default-class":"true"
+  }}}'</span></pre>
+            <div class="note-box">✅ Provisioner terpasang = sistem siap merespons permintaan PVC. Lanjut ke tab
+              <strong>Deploy Redis</strong>.
+            </div>
+          </div>
+
+          <div class="tab-pane" id="redis-deploy">
+            <div class="explanation">
+              Satu file <code>redis.yaml</code> merangkai tiga komponen sekaligus: <strong>PVC</strong> memesan 1GB
+              disk, <strong>Deployment</strong> menjalankan Pod Redis dengan flag <code>--appendonly yes</code> agar
+              data ditulis ke disk, dan <strong>Service</strong> membuat IP statis internal bernama
+              <code>redis-service</code> di port 6379.
+            </div>
+
+            <div class="steps-title">1 — Buat File redis.yaml</div>
+            <pre><span class="cmd">nano redis.yaml</span></pre>
+
+            <div class="step-label"><span style="--sc:#b91c1c">ISI FILE</span> Paste seluruh blok berikut, lalu simpan
+              (Ctrl+O, Enter, Ctrl+X):</div>
+            <pre><span class="cmt"># ── 1. PVC: pesan 1GB disk ──────────────────────────</span>
+<span class="str">apiVersion:</span> v1
+<span class="str">kind:</span> PersistentVolumeClaim
+<span class="str">metadata:</span>
+  <span class="kw">name:</span>      redis-pvc
+  <span class="kw">namespace:</span> sre-production
+<span class="str">spec:</span>
+  <span class="kw">accessModes:</span> [ReadWriteOnce]
+  <span class="kw">resources:</span>
+    <span class="kw">requests:</span>
+      <span class="kw">storage:</span> 1Gi
+<span class="flag">---</span>
+<span class="cmt"># ── 2. Deployment: jalankan 1 Pod Redis ─────────────</span>
+<span class="str">apiVersion:</span> apps/v1
+<span class="str">kind:</span> Deployment
+<span class="str">metadata:</span>
+  <span class="kw">name:</span>      redis-deployment
+  <span class="kw">namespace:</span> sre-production
+<span class="str">spec:</span>
+  <span class="kw">replicas:</span> 1
+  <span class="kw">selector:</span>
+    <span class="kw">matchLabels:</span>
+      <span class="kw">app:</span> redis
+  <span class="kw">template:</span>
+    <span class="kw">metadata:</span>
+      <span class="kw">labels:</span>
+        <span class="kw">app:</span> redis
+    <span class="kw">spec:</span>
+      <span class="kw">containers:</span>
+      - <span class="kw">name:</span>  redis
+        <span class="kw">image:</span> redis:7-alpine
+        <span class="kw">command:</span> [<span class="str">"redis-server"</span>]
+        <span class="kw">args:</span>    [<span class="str">"--appendonly"</span>, <span class="str">"yes"</span>]  <span class="cmt"># tulis ke disk, bukan hanya RAM</span>
+        <span class="kw">ports:</span>
+        - <span class="kw">containerPort:</span> 6379
+        <span class="kw">volumeMounts:</span>
+        - <span class="kw">name:</span>      redis-data
+          <span class="kw">mountPath:</span> /data               <span class="cmt"># Redis simpan AOF/RDB di sini</span>
+      <span class="kw">volumes:</span>
+      - <span class="kw">name:</span> redis-data
+        <span class="kw">persistentVolumeClaim:</span>
+          <span class="kw">claimName:</span> redis-pvc           <span class="cmt"># terikat ke PVC di atas</span>
+<span class="flag">---</span>
+<span class="cmt"># ── 3. Service: IP statis internal ──────────────────</span>
+<span class="str">apiVersion:</span> v1
+<span class="str">kind:</span> Service
+<span class="str">metadata:</span>
+  <span class="kw">name:</span>      redis-service
+  <span class="kw">namespace:</span> sre-production
+<span class="str">spec:</span>
+  <span class="kw">selector:</span>
+    <span class="kw">app:</span> redis
+  <span class="kw">ports:</span>
+  - <span class="kw">protocol:</span>   TCP
+    <span class="kw">port:</span>       6379
+    <span class="kw">targetPort:</span> 6379</pre>
+
+            <div class="steps-title">2 — Deploy ke Cluster</div>
+            <pre><span class="cmd">kubectl apply -f</span> redis.yaml
+
+<span class="cmt"># Output yang diharapkan:
+# persistentvolumeclaim/redis-pvc created
+# deployment.apps/redis-deployment created
+# service/redis-service created</span></pre>
+
+            <div class="steps-title">3 — Verifikasi Pod + PVC + Service</div>
+            <pre><span class="cmd">kubectl get pods,pvc,svc</span> <span class="flag">-n</span> sre-production
+
+<span class="cmt"># Yang diharapkan:
+NAME                                   READY   STATUS    RESTARTS   AGE
+pod/redis-deployment-94b8fbd56-vs727   1/1     <span class="cmd">Running</span>   0          16s
+
+NAME                              STATUS   VOLUME         CAPACITY   STORAGECLASS
+persistentvolumeclaim/redis-pvc   <span class="cmd">Bound</span>    pvc-ec5a7...   1Gi        local-path
+
+NAME                    TYPE        CLUSTER-IP       PORT(S)
+service/redis-service   ClusterIP   10.104.100.91    6379/TCP</span></pre>
+            <div class="note-box">✅ Pod <strong>Running</strong> + PVC <strong>Bound</strong> + Service ada = Redis siap
+              digunakan oleh Backend API!</div>
+          </div>
+
+          <div class="tab-pane" id="redis-howworks">
+            <div class="explanation">
+              Redis adalah cache <strong>in-memory</strong> — data disimpan di RAM, bukan disk, sehingga read/write
+              sangat cepat. Kedua API Pod replica membaca dan menulis ke Redis via <strong>Redis
+                Service</strong>.<br><br>
+              <strong>Redis Service</strong> bertipe ClusterIP — tidak punya external IP, tidak bisa diakses dari luar
+              cluster. API Pod tahu alamat Redis lewat <strong>Kubernetes internal DNS</strong> yang dikelola CoreDNS.
+            </div>
+
+            <div class="steps-title">Cara API Pod Menemukan Redis</div>
+            <pre><span class="cmt"># CoreDNS auto-resolve nama service ke ClusterIP:</span>
+<span class="str">redis-service.sre-production.svc.cluster.local</span>
+
+<span class="cmt"># Karena sama namespace, cukup pakai nama pendek:</span>
+<span class="str">redis-service</span>
+
+<span class="cmt"># Ini yang ada di ConfigMap (otomatis dibaca API Pod):</span>
+<span class="cmd">REDIS_HOST</span>=redis-service
+<span class="cmd">REDIS_PORT</span>=6379</pre>
+
+            <div class="steps-title">Apa yang Terjadi Kalau EC2 Di-reboot?</div>
+            <div class="explanation" style="font-size:11.5px;">
+              <strong>Cluster tidak perlu setup ulang.</strong> Karena <code>containerd</code> dan <code>kubelet</code>
+              sudah di-<code>enable</code> via systemctl, keduanya menyala otomatis saat OS boot.<br><br>
+              Private IP AWS tidak berubah saat stop/start — hanya hilang jika instance di-<em>terminate</em>. Jadi node
+              tetap saling menemukan.<br><br>
+              Yang <strong>wajib diperbarui</strong> setelah reboot: <strong>Public IP EC2</strong> (kecuali pakai
+              Elastic IP). Kamu harus update A Record DNS domain kamu ke Public IP Worker Node yang baru agar traffic
+              dari internet tetap masuk.
+            </div>
+            <div class="warn-box">⚠️ Kalau worker node <strong>NotReady</strong> setelah reboot, SSH ke worker dan
+              jalankan:<br><code>sudo swapoff -a && sudo systemctl restart containerd && sudo systemctl restart kubelet</code><br>Swap
+              yang aktif lagi saat boot adalah penyebab paling umum kubelet crash.</div>
+          </div>
+        </div>
+
+        <!-- PV -->
+        <div class="panel-content" id="panel-pv">
+          <div class="phase-badge"
+            style="background:rgba(185,28,28,.1);border-color:rgba(185,28,28,.3);color:var(--red);">💾 Phase 2 · Storage
+          </div>
+          <div class="panel-node-title">Persistent Volume</div>
+          <div class="panel-node-sub">Local Path Provisioner · EBS Worker Node · PVC Bound</div>
+          <div class="explanation">
+            Secara default, filesystem container adalah <strong>ephemeral</strong> — semua data hilang saat Pod restart.
+            Untuk Redis ini fatal: semua cache hilang.<br><br>
+            Solusinya: <strong>PersistentVolumeClaim (PVC)</strong> adalah "surat permintaan" storage. Local Path
+            Provisioner membaca permintaan itu dan membuatkan folder nyata di disk Worker Node, lalu mengikatnya
+            (<em>Bound</em>) ke PVC. Redis Pod me-mount folder itu sebagai <code>/data</code>.
+          </div>
+          <div class="steps-title">Alur: PVC → Provisioner → Disk</div>
+          <pre><span class="cmt"># 1. kamu deploy PVC → API Server mencatat di etcd</span>
+<span class="str">PVC redis-pvc</span>   STATUS: <span class="flag">Pending</span>   <span class="cmt"># menunggu provisioner</span>
+
+<span class="cmt"># 2. Local Path Provisioner mendeteksi PVC baru</span>
+<span class="cmt">#    → buat folder di Worker Node:</span>
+<span class="str">/opt/local-path-provisioner/pvc-ec5a7ea5.../</span>
+
+<span class="cmt"># 3. Provisioner ikat PV ke PVC</span>
+<span class="str">PVC redis-pvc</span>   STATUS: <span class="cmd">Bound</span>    <span class="cmt"># storage siap</span>
+
+<span class="cmt"># 4. Redis Pod mount PVC ke /data</span>
+<span class="str">mountPath: /data</span>  → <span class="cmt"># data AOF/RDB tersimpan di sini</span></pre>
+          <div class="warn-box">⚠️ <strong>Local Path PV terikat ke satu Worker Node.</strong> Kalau node itu
+            di-<em>terminate</em> AWS (bukan sekadar reboot), data hilang permanen. Untuk production, migrasi ke
+            <strong>AWS EBS PersistentVolume</strong> yang independent dari node.
+          </div>
+        </div>
+
+      </div><!-- /panel-inner -->
+    </div><!-- /panel-pane -->
+
+  </div><!-- /mid -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="leg">
+      <div class="leg-dot" style="background:#c2501a"></div>External
+    </div>
+    <div class="leg">
+      <div class="leg-dot" style="background:#1a4fd6"></div>AWS
+    </div>
+    <div class="leg">
+      <div class="leg-dot" style="background:#475569"></div>Control Plane
+    </div>
+    <div class="leg">
+      <div class="leg-dot" style="background:#0f766e"></div>Worker Nodes
+    </div>
+    <div class="leg">
+      <div class="leg-dot" style="background:#6d28d9"></div>Ingress
+    </div>
+    <div class="leg">
+      <div class="leg-dot" style="background:#166534"></div>Backend API
+    </div>
+    <div class="leg">
+      <div class="leg-dot" style="background:#b91c1c"></div>Redis
+    </div>
+    <div class="footer-hint">Click any node · Esc to close</div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/arch.js') }}"></script>
+</body>
+
+</html>

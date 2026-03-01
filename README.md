@@ -153,7 +153,7 @@ Error distribution:
 
 **snickerdoodless** — Amateur Wannabe Site Reliability Engineer  
 📎 Domain: [rall4sre.my.id](http://rall4sre.my.id)  
-🐙 GitHub: [github.com/rall4sre](https://github.com/snickerdoodless)
+🐙 GitHub: [github.com/snickerdoodless](https://github.com/snickerdoodless)
 
 ---
 

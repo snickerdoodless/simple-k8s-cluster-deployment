@@ -42,17 +42,25 @@ def architecture():
 def register_visit():
     try:
         count = conn.incr('hits')
-        return jsonify({'count': count, "pod": pod_name})
-    except redis.exceptions.ConnectionError:
-        return jsonify({'success': False}), 500
+        return jsonify({'count': count, 'pod': pod_name})
+    except redis.exceptions.ConnectionError as e:
+        return jsonify({
+            'error': 'Redis connection refused',
+            'detail': f'{redis_host}:{redis_port} — {str(e)}',
+            'pod': pod_name
+        }), 500
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     try:
-        count = conn.get('hits')
-        return jsonify({'count': count, "pod": pod_name})
-    except redis.exceptions.ConnectionError:
-        return jsonify({'success': False}), 500
+        count = conn.get('hits') or 0
+        return jsonify({'count': int(count), 'pod': pod_name})
+    except redis.exceptions.ConnectionError as e:
+        return jsonify({
+            'error': 'Redis connection refused',
+            'detail': f'{redis_host}:{redis_port} — {str(e)}',
+            'pod': pod_name
+        }), 500
         
 if __name__ == '__main__':  
     app.run(debug=True, port=5000)

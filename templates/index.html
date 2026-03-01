@@ -9,7 +9,6 @@
     href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-  <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </head>
 
 <body>
@@ -27,7 +26,6 @@
 
   <main class="page">
 
-    <!-- HERO -->
     <div class="hero-row fi">
       <div>
         <div class="sec-label">// namespace: sre-production</div>
@@ -47,7 +45,6 @@
       </div>
     </div>
 
-    <!-- UPTIME -->
     <div class="uptime-wrap fi">
       <div class="sec-label">// cluster uptime — last 30 days</div>
       <div class="uptime-meta">
@@ -57,7 +54,6 @@
       <div class="uptime-track" id="uptimeTrack"></div>
     </div>
 
-    <!-- METRICS -->
     <div class="fi">
       <div class="sec-label">// kubectl top cluster</div>
       <div class="metrics-row">
@@ -73,38 +69,30 @@
         </div>
         <div class="metric green">
           <div class="metric-lbl">Namespaces</div>
-          <div class="metric-val">5</div>
+          <div class="metric-val">6</div>
           <div class="metric-sub">sre-production active</div>
         </div>
         <div class="metric purple">
           <div class="metric-lbl">Ingress Rules</div>
-          <div class="metric-val">4</div>
+          <div class="metric-val">1</div>
           <div class="metric-sub">Port 80/443 exposed</div>
         </div>
       </div>
     </div>
 
-    <!-- PODS + TERMINAL -->
-    <div class="two-col fi">
-      <div>
-        <div class="sec-label">// kubectl get pods -n sre-production</div>
-        <div class="pods-list" id="podsList"></div>
-      </div>
-      <div>
-        <div class="sec-label">// control-plane — live output</div>
-        <div class="terminal">
-          <div class="term-bar">
-            <div class="tb r"></div>
-            <div class="tb y"></div>
-            <div class="tb g"></div>
-            <span class="term-title">rall4sre@control-plane:~</span>
-          </div>
-          <div class="term-body" id="termBody"></div>
+    <div class="fi">
+      <div class="sec-label sec-label-center">// control-plane — live output</div>
+      <div class="terminal">
+        <div class="term-bar">
+          <div class="tb r"></div>
+          <div class="tb y"></div>
+          <div class="tb g"></div>
+          <span class="term-title">ubuntu@control-plane:~</span>
         </div>
+        <div class="term-body" id="termBody"></div>
       </div>
     </div>
 
-    <!-- ARCHITECTURE -->
     <div class="fi">
       <div class="sec-label">// cluster architecture diagram</div>
       <div class="arch-box">
@@ -198,6 +186,7 @@
 
   <div id="toast"></div>
 
+  <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </body>
 
 </html>

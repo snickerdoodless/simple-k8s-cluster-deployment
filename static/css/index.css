@@ -118,6 +118,14 @@ body::before {
     background: var(--rule);
 }
 
+.sec-label-center {
+    justify-content: center;
+}
+
+.sec-label-center::after {
+    display: none;
+}
+
 /* ── HERO ROW ── */
 .hero-row {
     display: grid;
@@ -487,7 +495,8 @@ body::before {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     line-height: 2;
-    min-height: 200px;
+    min-height: 300px;
+    color: #4ade80;
 }
 
 .t-row {
@@ -510,6 +519,11 @@ body::before {
 
 .t-green {
     color: #4ade80;
+    padding-left: 16px;
+}
+
+.t-red {
+    color: #f87171;
     padding-left: 16px;
 }
 

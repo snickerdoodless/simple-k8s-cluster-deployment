@@ -3,10 +3,15 @@ async function fetchStats() {
   try {
     const res = await fetch('/api/stats');
     const data = await res.json();
+    if (!res.ok) {
+      logTerminal(`GET /api/stats ${res.status} FAIL - ${data.error}`, 't-red');
+      logTerminal(`  └─ ${data.detail}`, 't-red');
+      return;
+    }
     updateUI(data);
-    logTerminal(`GET /api/stats 200 OK - Fetched current state`);
+    logTerminal(`GET /api/stats ${res.status} OK - Fetched current state`);
   } catch (err) {
-    logTerminal(`Error connecting to API backend`, 't-red');
+    logTerminal(`GET /api/stats ERROR - Network unreachable: ${err.message}`, 't-red');
   }
 }
 
@@ -19,21 +24,27 @@ async function registerVisit() {
   try {
     const res = await fetch('/api/visit', { method: 'POST' });
     const data = await res.json();
-    
-    updateUI(data);
-    showToast(`Success! Recorded by ${data.pod}`);
-    logTerminal(`POST /api/visit 200 OK - Redis INCR executed by ${data.pod}`, 't-green');
-    
-    // Animasi angka
-    const numEl = document.getElementById('counterNum');
-    numEl.classList.add('bump');
-    setTimeout(() => numEl.classList.remove('bump'), 200);
-    
+
+    if (!res.ok) {
+      showToast(`${res.status} — ${data.error}`);
+      logTerminal(`POST /api/visit ${res.status} FAIL - ${data.error}`, 't-red');
+      logTerminal(`  └─ ${data.detail}`, 't-red');
+    } else {
+      updateUI(data);
+      showToast(`Success! Recorded by ${data.pod}`);
+      logTerminal(`POST /api/visit ${res.status} OK - Redis INCR executed by ${data.pod}`, 't-green');
+
+      // Animasi angka
+      const numEl = document.getElementById('counterNum');
+      numEl.classList.add('bump');
+      setTimeout(() => numEl.classList.remove('bump'), 200);
+    }
+
   } catch (err) {
-    showToast('Failed to connect to backend');
-    logTerminal(`POST /api/visit ERROR`, 't-red');
+    showToast('Network error — backend unreachable');
+    logTerminal(`POST /api/visit ERROR - Network unreachable: ${err.message}`, 't-red');
   }
-  
+
   btn.disabled = false;
   btn.innerText = '→ Register Visit';
 }
@@ -44,22 +55,12 @@ function updateUI(data) {
   document.getElementById('counterNum').innerText = paddedNum;
   document.getElementById('m-total').innerText = paddedNum;
   document.getElementById('sessionTag').innerText = `Handled by: ${data.pod}`;
-  
-  // Update daftar pod aktif di UI
-  document.getElementById('podsList').innerHTML = `
-    <div class="pod-row">
-      <div class="pdot running"></div>
-      <div class="pod-name">${data.pod}</div>
-      <div class="pod-ns">sre-production</div>
-      <div class="pod-r">Active Node</div>
-    </div>
-  `;
 }
 
 // Terminal UI effect
-function logTerminal(msg, colorClass='t-green') {
+function logTerminal(msg, colorClass = 't-green') {
   const term = document.getElementById('termBody');
-  const time = new Date().toISOString().split('T')[1].slice(0,8);
+  const time = new Date().toISOString().split('T')[1].slice(0, 8);
   term.innerHTML += `
     <div class="t-row">
       <span class="t-prompt">[${time}]</span>
